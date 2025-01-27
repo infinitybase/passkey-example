@@ -18,8 +18,8 @@ importers:
         specifier: ^5.64.2
         version: 5.64.2(react@18.3.1)
       bakosafe:
-        specifier: 0.1.4-betha-passkey
-        version: 0.1.4-betha-passkey(fuels@0.96.1)
+        specifier: 0.1.5-betha-passkey
+        version: 0.1.5-betha-passkey(fuels@0.96.1)
       fuels:
         specifier: ^0.96.1
         version: 0.96.1
@@ -1011,8 +1011,8 @@ packages:
     resolution: {integrity: sha512-Cg7TFGpIr01vOQNODXOOaGz2NpCU5gl8x1qJFbb6hbZxR7XrcE2vtbAsTAbJ7/xwJtUuJEw8K8Zr/AE0LHlesg==}
     engines: {node: '>=10', npm: '>=6'}
 
-  bakosafe@0.1.4-betha-passkey:
-    resolution: {integrity: sha512-g4B3q2WQONQamkbnyIwRfBbNiF4oK1prz6JUc3ELywvpO/XXpOe388U90hKOEHevm4gSEGhJLJ4dN1FNrPIkfw==}
+  bakosafe@0.1.5-betha-passkey:
+    resolution: {integrity: sha512-jbTndBnshNRV6ug03By4OweXEaJGRiq1FDVAPiu+uwfpR0t1PFI8yKBB+YzNQNnuMM3aicwWc+sRL4EZgV/Imw==}
     peerDependencies:
       fuels: 0.96.1
 
@@ -3306,7 +3306,7 @@ snapshots:
       cosmiconfig: 7.1.0
       resolve: 1.22.10
 
-  bakosafe@0.1.4-betha-passkey(fuels@0.96.1):
+  bakosafe@0.1.5-betha-passkey(fuels@0.96.1):
     dependencies:
       '@noble/curves': 1.8.1
       axios: 1.7.9

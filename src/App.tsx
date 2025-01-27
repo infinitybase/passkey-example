@@ -93,6 +93,10 @@ const PageWrapper = ({children}: { children: ReactNode }) => {
                     base: '100vh',
                     sm: 600
                 }}
+                maxH={{
+                    base: '100vh',
+                    sm: 600
+                }}
                 textAlign="center"
                 flexDirection="column"
             >

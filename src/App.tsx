@@ -19,13 +19,15 @@ import {InputGroup} from "@/components/ui/input-group.tsx";
 import {LuUser} from "react-icons/lu";
 import {EmptyState} from "@/components/ui/empty-state.tsx";
 import {StatLabel, StatRoot, StatValueText} from "@/components/ui/stat.tsx";
-import {CiLogout} from "react-icons/ci";
+import {CiLogout, CiCircleMore} from "react-icons/ci";
 import {BiCopy, BiCheck} from "react-icons/bi";
 import {Tag} from "@/components/ui/tag.tsx";
 import {bn} from "fuels";
 import {usePasskey} from "@/context/passkey.tsx";
 import {useMutation, useQuery} from "@tanstack/react-query";
 import {Avatar} from "@/components/ui/avatar.tsx";
+import {CgAdd} from "react-icons/cg";
+import {IoMdAdd} from "react-icons/io";
 
 function formatAddress(address: string, factor?: number) {
     const size = factor ?? 10;
@@ -160,9 +162,8 @@ const AuthPage = () => {
     const hasPasskeys = passkeys.data?.length > 0;
 
     const CreateAccount = (
-        <>
+        <VStack w="full" gap={5}>
             <EmptyState
-                icon={<BakoIcon w="36px" color="gray.600"/>}
                 title="Passkey Account"
                 description="One tap to descentralize web."
                 p={0}
@@ -184,14 +185,13 @@ const AuthPage = () => {
                 Continue
                 <Text as="span" fontSize="lg">→</Text>
             </PrimaryButton>
-        </>
+        </VStack>
     );
 
     const ConnectAccount = (
         <>
             <EmptyState
                 mt={4}
-                icon={<BakoIcon w="36px" color="gray.600"/>}
                 title="Select an Account"
                 description="One tap to descentralize web."
                 p={0}
@@ -218,49 +218,67 @@ const AuthPage = () => {
                         </VStack>
                     </HStack>
                 ))}
+                {myPasskeys.items.length < 4 && (
+                    <HStack
+                        gap={5}
+                        cursor="pointer"
+                        onClick={() => setStep(AuthPageStep.Create)}
+                        px={4}
+                        py={5}
+                        borderColor="rgb(31 31 31 / 1)"
+                        borderStyle="solid"
+                        borderWidth={1}
+                        borderRadius="xl"
+                        w="full"
+                        key="add"
+                    >
+                        <Avatar fallback={<></>}>
+                            <IoMdAdd />
+                        </Avatar>
+                        <VStack gap={1} alignItems="start" flex={1} w="full">
+                            <Heading size="sm">Create new account</Heading>
+                        </VStack>
+                    </HStack>
+                )}
             </VStack>
         </>
     );
 
     return (
-        <VStack w="full" gap="5">
-            <VStack w="full" gap="8">
-                {!hasPasskeys && CreateAccount}
-                {!step && hasPasskeys && (
-                    <>
-                        <EmptyState
-                            icon={<BakoIcon w="36px" color="gray.600"/>}
-                            title="Passkey Account"
-                            description="One tap to descentralize web."
-                            p={0}
-                        />
-                        <VStack w="full" gap="5">
-                            <PrimaryButton
-                                size="xl"
-                                onClick={() => setStep(AuthPageStep.Create)}
-                            >
-                                Create Account
-                                <Text as="span" fontSize="lg">→</Text>
-                            </PrimaryButton>
-                            <HStack w="full">
-                                <Separator flex="1"/>
-                                <Text flexShrink="0">or</Text>
-                                <Separator flex="1"/>
-                            </HStack>
-                            <PrimaryButton
-                                size="xl"
-                                onClick={() => setStep(AuthPageStep.Connect)}
-                            >
-                                Select an Account
-                                <Text as="span" fontSize="lg">→</Text>
-                            </PrimaryButton>
-                        </VStack>
-                    </>
-                )}
-                {step === AuthPageStep.Create && CreateAccount}
-                {step === AuthPageStep.Connect && ConnectAccount}
-            </VStack>
-
+        <VStack justifyContent="center" h="full" w="full" gap="8">
+            {!hasPasskeys && CreateAccount}
+            {!step && hasPasskeys && (
+                <>
+                    <EmptyState
+                        title="Passkey Account"
+                        description="One tap to descentralize web."
+                        p={0}
+                    />
+                    <VStack w="full" gap="5">
+                        <PrimaryButton
+                            size="xl"
+                            onClick={() => setStep(AuthPageStep.Connect)}
+                        >
+                            Select an Account
+                            <Text as="span" fontSize="lg">→</Text>
+                        </PrimaryButton>
+                        <HStack w="full">
+                            <Separator flex="1"/>
+                            <Text flexShrink="0">or</Text>
+                            <Separator flex="1"/>
+                        </HStack>
+                        <PrimaryButton
+                            size="xl"
+                            onClick={() => setStep(AuthPageStep.Create)}
+                        >
+                            Create Account
+                            <Text as="span" fontSize="lg">→</Text>
+                        </PrimaryButton>
+                    </VStack>
+                </>
+            )}
+            {step === AuthPageStep.Create && CreateAccount}
+            {step === AuthPageStep.Connect && ConnectAccount}
         </VStack>
     );
 };
@@ -290,7 +308,7 @@ const FaucetPage = () => {
     }, [hasBalance.data]);
 
     return (
-        <VStack w="full" gap="8">
+        <VStack justifyContent="center" w="full" h="full" gap="8">
             <EmptyState
                 icon={<FuelIcon/>}
                 title="Start adding tokens"
@@ -300,14 +318,14 @@ const FaucetPage = () => {
                      endElement={copied ? <BiCheck/> : <BiCopy/>} variant="subtle">
                     {formatAddress(passkey.vault?.address.toString() ?? "")}
                 </Tag>
-                <Button loading={isClicked} loadingText="Funding..." onClick={() => {
-                    setIsClicked(true);
-                    passkey.getFaucet();
-                }} size="xl" borderRadius="xl" w="full" colorScheme="whiteAlpha">
-                    Faucet
-                    <Text as="span" fontSize="lg">→</Text>
-                </Button>
             </EmptyState>
+            <Button loading={isClicked} loadingText="Funding..." onClick={() => {
+                setIsClicked(true);
+                passkey.getFaucet();
+            }} size="xl" borderRadius="xl" w="full" colorScheme="whiteAlpha">
+                Faucet
+                <Text as="span" fontSize="lg">→</Text>
+            </Button>
         </VStack>
     );
 };
@@ -378,19 +396,20 @@ const WalletPage = () => {
                 icon={<BiCheck/>}
                 title="Transaction Success!"
                 description="0.0001 ETH has been sent to 0x7175...d5a1"
-            >
-                <VStack w="full" gap={2}>
-                    <Button onClick={onViewInExplorer} size="xl" borderRadius="xl" w="full" colorScheme="whiteAlpha">
-                        View in Explorer
-                        <Text as="span" fontSize="lg">→</Text>
-                    </Button>
-                    <Button variant="outline" onClick={() => setStep(WalletPageStep.Home)} size="xl" borderRadius="xl"
-                            w="full" colorScheme="gray">
-                        <Text as="span" fontSize="lg">←</Text>
-                        Back to Home
-                    </Button>
-                </VStack>
-            </EmptyState>
+                h="full"
+                display="flex"
+                alignItems="center"
+            />
+            <VStack w="full" gap={2}>
+                <Button onClick={onViewInExplorer} size="xl" borderRadius="xl" w="full" colorScheme="whiteAlpha">
+                    View in Explorer
+                    <Text as="span" fontSize="lg">→</Text>
+                </Button>
+                <Button variant="outline" onClick={() => setStep(WalletPageStep.Home)} size="xl" borderRadius="xl"
+                        w="full" colorScheme="gray">
+                    Back to Home
+                </Button>
+            </VStack>
         </>
     )
 
@@ -451,6 +470,12 @@ function App() {
             {page === Pages.Auth && <AuthPage/>}
             {page === Pages.Faucet && <FaucetPage/>}
             {page === Pages.Wallet && <WalletPage/>}
+            <HStack as="a" target="blank" href="https://bako.global/" mt={4} gap={1}>
+                <Text color="gray" fontSize="xs" as="span">
+                    Powered by
+                </Text>
+                <BakoIcon size="sm" color="gray.600"/>
+            </HStack>
         </PageWrapper>
     );
 }

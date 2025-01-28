@@ -273,7 +273,7 @@ const FaucetPage = () => {
     });
 
     const hasBalance = useQuery({
-        queryKey: ["has-balance"],
+        queryKey: ["has-balance", passkey.vault?.address],
         queryFn: async () => {
             const balance = await passkey.vault?.getBalance();
             return !!balance?.gt(bn(0));

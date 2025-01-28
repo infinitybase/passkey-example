@@ -19,14 +19,13 @@ import {InputGroup} from "@/components/ui/input-group.tsx";
 import {LuUser} from "react-icons/lu";
 import {EmptyState} from "@/components/ui/empty-state.tsx";
 import {StatLabel, StatRoot, StatValueText} from "@/components/ui/stat.tsx";
-import {CiLogout, CiCircleMore} from "react-icons/ci";
+import {CiLogout} from "react-icons/ci";
 import {BiCopy, BiCheck} from "react-icons/bi";
 import {Tag} from "@/components/ui/tag.tsx";
 import {bn} from "fuels";
 import {usePasskey} from "@/context/passkey.tsx";
 import {useMutation, useQuery} from "@tanstack/react-query";
 import {Avatar} from "@/components/ui/avatar.tsx";
-import {CgAdd} from "react-icons/cg";
 import {IoMdAdd} from "react-icons/io";
 
 function formatAddress(address: string, factor?: number) {

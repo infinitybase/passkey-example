@@ -1,4 +1,4 @@
-import {ReactNode, useCallback, useEffect, useMemo, useState} from 'react'
+import {ReactNode, useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {
     Button,
     Box,
@@ -39,6 +39,7 @@ const floatingStyles = defineStyle({
     bg: "gray.900",
     px: "0.5",
     ml: "3",
+    color: "#8f8f8f",
     top: "-0.6rem",
     insetStart: "2",
     fontWeight: "normal",
@@ -358,6 +359,7 @@ const TransactionForn = (props: {
     onSend: (data: TransactionData) => void,
     isLoading: boolean
 }) => {
+    const inputRef = useRef<HTMLInputElement | null>(null);
     const [formValue, setFormValue] = useState({
         handleOrAddress: '',
         amount: ''
@@ -369,13 +371,16 @@ const TransactionForn = (props: {
         const client = new BakoIDClient();
         const resolver = await client.resolver(value, 9889);
         setResolver(resolver);
+
+        inputRef.current?.blur();
     }, 400), []);
 
     const onAddressInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const {value} = e.target;
         setFormValue({...formValue, handleOrAddress: value});
 
-        if (value.startsWith('@') && isValidDomain(value)) {
+        const isHandle = !value.startsWith('0x');
+        if (isHandle && isValidDomain(value)) {
             fetchHandle(value);
         }
     }
@@ -410,6 +415,8 @@ const TransactionForn = (props: {
                 <Field.Root>
                     <Box pos="relative" w="full">
                         <Input
+                            ref={inputRef}
+                            autoComplete="off"
                             value={formValue.handleOrAddress}
                             onChange={onAddressInputChange}
                             bg="gray.900"
@@ -420,9 +427,9 @@ const TransactionForn = (props: {
                         />
                         <HStack hidden={!resolver} justifyContent="space-between" textAlign="left" bg="gray.900"
                                 left="1px" px="4"
-                                w="calc(100% - 2px)" position="absolute" top="0.75rem" zIndex="2">
+                                w="calc(100% - 2px)" position="absolute" top="0.8rem" zIndex="2">
                             <Box>
-                                <Text>{formValue.handleOrAddress}</Text>
+                                <Text fontSize="sm" fontWeight="semibold">@{formValue.handleOrAddress}</Text>
                                 <Text fontSize="xs">{formatAddress(resolver!)}</Text>
                             </Box>
                             <IoIosClose cursor="pointer" onClick={clear} size="24"/>
@@ -433,6 +440,7 @@ const TransactionForn = (props: {
                 <Field.Root>
                     <Box pos="relative" w="full">
                         <Input
+                            autoComplete="off"
                             value={formValue.amount}
                             onChange={onAmountInputChange}
                             px={4}

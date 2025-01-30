@@ -542,7 +542,7 @@ const WalletPage = () => {
     const TxResult = (
         <>
             <EmptyState
-                icon={<BiCheck color="green" />}
+                icon={<BiCheck color="green"/>}
                 title="Transaction Success!"
                 description="0.0001 ETH has been sent to 0x7175...d5a1"
                 h="full"
@@ -577,9 +577,13 @@ const WalletPage = () => {
                 </Tag>
             </Box>
             <Group w="full">
-                <Button w="full" loading={sendTransaction.isPending} loadingText="Sending..."
-                        onClick={() => setStep(WalletPageStep.TxForm)} size="xl"
-                        borderRadius="xl" colorScheme="whiteAlpha">
+                <Button
+                    w="full"
+                    onClick={() => setStep(WalletPageStep.TxForm)}
+                    size="xl"
+                    borderRadius="xl" colorScheme="whiteAlpha"
+                    disabled={balance.data?.lte(0)}
+                >
                     Send
                     <Text as="span" fontSize="lg">→</Text>
                 </Button>

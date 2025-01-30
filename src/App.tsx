@@ -94,7 +94,7 @@ const PageWrapper = ({children}: { children: ReactNode }) => {
         <Flex
             align="center"
             justify="center"
-            minH="100vh"
+            minH={`${window.innerHeight}px`}
             bg="black"
             w="100vw"
         >

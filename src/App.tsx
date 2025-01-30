@@ -115,11 +115,11 @@ const PageWrapper = ({children}: { children: ReactNode }) => {
                 p={4}
                 px={5}
                 height={{
-                    base: '100vh',
+                    base: `${window.innerHeight}px`,
                     sm: 600
                 }}
                 maxH={{
-                    base: '100vh',
+                    base: `${window.innerHeight}px`,
                     sm: 600
                 }}
                 textAlign="center"

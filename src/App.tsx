@@ -1,4 +1,4 @@
-import {ReactNode, useEffect, useMemo, useState} from 'react'
+import {ReactNode, useCallback, useEffect, useMemo, useState} from 'react'
 import {
     Button,
     Box,
@@ -6,27 +6,26 @@ import {
     VStack,
     Text,
     Center,
-    Input,
     Group,
     createIcon,
     IconButton,
     chakra,
     Separator,
     HStack,
-    createListCollection, useClipboard, Heading
-} from "@chakra-ui/react"
-import {InputGroup} from "@/components/ui/input-group.tsx";
-import {LuUser} from "react-icons/lu";
+    createListCollection, useClipboard, Heading, Input, Field, defineStyle
+} from "@chakra-ui/react";
 import {EmptyState} from "@/components/ui/empty-state.tsx";
 import {StatLabel, StatRoot, StatValueText} from "@/components/ui/stat.tsx";
 import {CiLogout} from "react-icons/ci";
 import {BiCopy, BiCheck} from "react-icons/bi";
 import {Tag} from "@/components/ui/tag.tsx";
-import {bn} from "fuels";
+import {BN, bn, isB256} from "fuels";
 import {usePasskey} from "@/context/passkey.tsx";
 import {useMutation, useQuery} from "@tanstack/react-query";
 import {Avatar} from "@/components/ui/avatar.tsx";
-import {IoMdAdd} from "react-icons/io";
+import {IoMdAdd, IoIosClose} from "react-icons/io";
+import {debounce} from "lodash";
+import {BakoIDClient, isValidDomain} from "@bako-id/sdk";
 
 function formatAddress(address: string, factor?: number) {
     const size = factor ?? 10;
@@ -34,6 +33,31 @@ function formatAddress(address: string, factor?: number) {
     if (!address) return;
     return `${address.slice(0, size)}...${address.slice(-4)}`;
 }
+
+const floatingStyles = defineStyle({
+    pos: "absolute",
+    bg: "gray.900",
+    px: "0.5",
+    ml: "3",
+    top: "-0.6rem",
+    insetStart: "2",
+    fontWeight: "normal",
+    fontSize: "xs",
+    pointerEvents: "none",
+    transition: "position",
+    _peerPlaceholderShown: {
+        color: "fg.muted",
+        top: "1.4rem",
+        insetStart: "3",
+        fontSize: 'md'
+    },
+    _peerFocusVisible: {
+        color: "fg",
+        top: "-2.5",
+        insetStart: "2",
+        fontSize: "xs",
+    },
+})
 
 const PrimaryButton = chakra(Button, {
     base: {
@@ -113,7 +137,6 @@ enum AuthPageStep {
 }
 
 const AuthPage = () => {
-    const [username, setUsername] = useState("");
     const [step, setStep] = useState<AuthPageStep>()
 
     const {passkey, onConnect, changePage} = usePasskey();
@@ -126,10 +149,8 @@ const AuthPage = () => {
 
     const createAccount = useMutation({
         mutationFn: async () => {
-            const account = await passkey.createAccount(username);
-            const balance = await passkey.vault?.getBalance();
-            const hasBalance = balance?.gt(bn(0));
-            changePage(hasBalance ? Pages.Wallet : Pages.Faucet);
+            const account = await passkey.createAccount(`Account ${passkeys.data.length + 1}`);
+            changePage(Pages.Wallet);
             return account;
         },
         onSuccess: (data) => {
@@ -140,9 +161,7 @@ const AuthPage = () => {
     const connectAccount = useMutation({
         mutationFn: async (account: string) => {
             await passkey.connect(account);
-            const balance = await passkey.vault?.getBalance();
-            const hasBalance = balance?.gt(bn(0));
-            changePage(hasBalance ? Pages.Wallet : Pages.Faucet);
+            changePage(Pages.Wallet);
             return account;
         },
         onSuccess: (data) => {
@@ -161,25 +180,18 @@ const AuthPage = () => {
     const hasPasskeys = passkeys.data?.length > 0;
 
     const CreateAccount = (
-        <VStack w="full" gap={5}>
-            <EmptyState
-                title="Passkey Account"
-                description="One tap to descentralize web."
-                p={0}
-            />
-            <InputGroup w="full" flex="1" startElement={<LuUser/>}>
-                <Input
-                    size="xl"
-                    value={username}
-                    borderRadius="xl"
-                    placeholder="Username"
-                    onChange={e => setUsername(e.target.value)}
+        <VStack w="full" h="full" gap={5}>
+            <Flex alignItems="center" flex={1}>
+                <EmptyState
+                    title="Passkey Account"
+                    description="One tap to descentralize web."
+                    p={0}
                 />
-            </InputGroup>
+            </Flex>
             <PrimaryButton
                 size="xl"
                 onClick={() => createAccount.mutate()}
-                disabled={createAccount.isPending || !username}
+                disabled={createAccount.isPending}
             >
                 Continue
                 <Text as="span" fontSize="lg">→</Text>
@@ -221,7 +233,7 @@ const AuthPage = () => {
                     <HStack
                         gap={5}
                         cursor="pointer"
-                        onClick={() => setStep(AuthPageStep.Create)}
+                        onClick={() => createAccount.mutate()}
                         px={4}
                         py={5}
                         borderColor="rgb(31 31 31 / 1)"
@@ -232,7 +244,7 @@ const AuthPage = () => {
                         key="add"
                     >
                         <Avatar fallback={<></>}>
-                            <IoMdAdd />
+                            <IoMdAdd/>
                         </Avatar>
                         <VStack gap={1} alignItems="start" flex={1} w="full">
                             <Heading size="sm">Create new account</Heading>
@@ -268,7 +280,7 @@ const AuthPage = () => {
                         </HStack>
                         <PrimaryButton
                             size="xl"
-                            onClick={() => setStep(AuthPageStep.Create)}
+                            onClick={() => createAccount.mutate()}
                         >
                             Create Account
                             <Text as="span" fontSize="lg">→</Text>
@@ -331,7 +343,142 @@ const FaucetPage = () => {
 
 enum WalletPageStep {
     TxResult = "TxResult",
+    TxForm = "TxForm",
     Home = "Home",
+}
+
+interface TransactionData {
+    to: string;
+    amount: string;
+}
+
+const TransactionForn = (props: {
+    balance: BN,
+    onCancel: () => void,
+    onSend: (data: TransactionData) => void,
+    isLoading: boolean
+}) => {
+    const [formValue, setFormValue] = useState({
+        handleOrAddress: '',
+        amount: ''
+    });
+
+    const [resolver, setResolver] = useState<string | null>(null);
+
+    const fetchHandle = useCallback(debounce(async (value) => {
+        const client = new BakoIDClient();
+        const resolver = await client.resolver(value, 9889);
+        setResolver(resolver);
+    }, 400), []);
+
+    const onAddressInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const {value} = e.target;
+        setFormValue({...formValue, handleOrAddress: value});
+
+        if (value.startsWith('@') && isValidDomain(value)) {
+            fetchHandle(value);
+        }
+    }
+
+    const onAmountInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const {value} = e.target;
+        setFormValue({...formValue, amount: value});
+    }
+
+    const clear = () => {
+        setResolver(null);
+        setFormValue({...formValue, handleOrAddress: ""});
+    }
+
+    const isValid = useMemo(() => {
+        let amount: BN;
+        try {
+            if (!formValue.amount) return false;
+            amount = bn.parseUnits(formValue.amount);
+        } catch (_) {
+            return false;
+        }
+
+        const hasBalance = props.balance.gt(0) && amount.gt(0) && amount.lte(props.balance);
+        const address = resolver ?? formValue.handleOrAddress;
+        return hasBalance && isB256(address);
+    }, [formValue.amount, formValue.handleOrAddress, props.balance, resolver]);
+
+    return (
+        <>
+            <Box as={Center} gap={6} flexDir="column" w="full" h="full">
+                <Field.Root>
+                    <Box pos="relative" w="full">
+                        <Input
+                            value={formValue.handleOrAddress}
+                            onChange={onAddressInputChange}
+                            bg="gray.900"
+                            size="2xl"
+                            borderRadius="xl"
+                            className="peer"
+                            placeholder=""
+                        />
+                        <HStack hidden={!resolver} justifyContent="space-between" textAlign="left" bg="gray.900"
+                                left="1px" px="4"
+                                w="calc(100% - 2px)" position="absolute" top="0.75rem" zIndex="2">
+                            <Box>
+                                <Text>{formValue.handleOrAddress}</Text>
+                                <Text fontSize="xs">{formatAddress(resolver!)}</Text>
+                            </Box>
+                            <IoIosClose cursor="pointer" onClick={clear} size="24"/>
+                        </HStack>
+                        <Field.Label css={floatingStyles}>Handle or Address</Field.Label>
+                    </Box>
+                </Field.Root>
+                <Field.Root>
+                    <Box pos="relative" w="full">
+                        <Input
+                            value={formValue.amount}
+                            onChange={onAmountInputChange}
+                            px={4}
+                            bg="gray.900"
+                            size="2xl"
+                            borderRadius="xl"
+                            className="peer"
+                            placeholder=""
+                            mb={2}
+                        />
+                        <Field.Label css={floatingStyles}>ETH Amount</Field.Label>
+                        <Field.HelperText fontSize="sm">Balance: {props.balance.format()} ETH</Field.HelperText>
+                    </Box>
+                </Field.Root>
+            </Box>
+            <VStack w="full">
+                <Button w="full"
+                        loading={props.isLoading}
+                        loadingText="Sending..."
+                        disabled={!isValid}
+                        onClick={() => props.onSend({
+                            amount: formValue.amount,
+                            to: resolver ?? formValue.handleOrAddress
+                        })}
+                        size="xl"
+                        borderRadius="xl"
+                        colorScheme="whiteAlpha"
+                >
+                    Send
+                </Button>
+                <Button w="full"
+                        onClick={props.onCancel}
+                        disabled={props.isLoading}
+                        size="xl"
+                        borderRadius="xl"
+                        colorScheme="whiteAlpha"
+                        variant="outline"
+                >
+                    Cancel
+                </Button>
+                {/*<Button loading={signMessage.isPending} loadingText="Signin..." onClick={() => signMessage.mutate()} size="xl" borderRadius="xl" colorScheme="">*/}
+                {/*    Sign Message*/}
+                {/*</Button>*/}
+            </VStack>
+        </>
+    )
 }
 
 const WalletPage = () => {
@@ -343,7 +490,6 @@ const WalletPage = () => {
 
     useEffect(() => {
         if (passkeyId) {
-            console.log('Connecting to passkey', passkeyId);
             passkey.connect(passkeyId!);
         }
     }, [passkeyId]);
@@ -354,24 +500,28 @@ const WalletPage = () => {
             return passkey.vault!.getBalance();
         },
         enabled: !!passkey.vault,
+        initialData: bn(0),
         refetchInterval: 1000,
     });
 
     const sendTransaction = useMutation({
-        mutationFn: async () => {
+        mutationFn: async (data: TransactionData) => {
             return passkey.sendTransaction({
                 name: 'sendTransaction-by-passkey-dapp',
                 assets: [
                     {
                         assetId: passkey.vault!.provider.getBaseAssetId(),
-                        amount: '0.0001',
-                        to: '0x7175e9Bb2b9448aDc7356EAC76b7248eD00650B2Ab31A926761B5Cd69718d5a1',
+                        amount: data.amount,
+                        to: data.to,
                     },
                 ],
             });
         },
         onSuccess: () => {
             setStep(WalletPageStep.TxResult);
+        },
+        onError: (error) => {
+            console.log(error)
         }
     });
 
@@ -392,7 +542,7 @@ const WalletPage = () => {
     const TxResult = (
         <>
             <EmptyState
-                icon={<BiCheck/>}
+                icon={<BiCheck color="green" />}
                 title="Transaction Success!"
                 description="0.0001 ETH has been sent to 0x7175...d5a1"
                 h="full"
@@ -428,7 +578,7 @@ const WalletPage = () => {
             </Box>
             <Group w="full">
                 <Button w="full" loading={sendTransaction.isPending} loadingText="Sending..."
-                        onClick={() => sendTransaction.mutate()} disabled={sendTransaction.isPending} size="xl"
+                        onClick={() => setStep(WalletPageStep.TxForm)} size="xl"
                         borderRadius="xl" colorScheme="whiteAlpha">
                     Send
                     <Text as="span" fontSize="lg">→</Text>
@@ -451,6 +601,14 @@ const WalletPage = () => {
             </IconButton>
             {step === WalletPageStep.Home && Home}
             {step === WalletPageStep.TxResult && TxResult}
+            {step === WalletPageStep.TxForm &&
+                <TransactionForn
+                    onCancel={() => setStep(WalletPageStep.Home)}
+                    onSend={(data) => sendTransaction.mutate(data)}
+                    balance={balance.data}
+                    isLoading={sendTransaction.isPending}
+                />
+            }
         </VStack>
     );
 };

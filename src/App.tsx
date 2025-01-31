@@ -506,7 +506,7 @@ const NetworkBadge = () => {
     });
 
     return (
-        <Badge color="gray.400" borderRadius="xl" cursor="pointer" px={3} py={2}
+        <Badge color="gray.400" borderRadius="xl" px={3} py={2}
                variant="outline" size="md">
             {isLoading && !data ? (
                 <ProgressCircle.Root value={null} size="sm">

@@ -2,7 +2,7 @@ import {Passkey} from "bakosafe";
 import {createContext, useContext, useEffect, useState} from "react";
 import {Provider} from "fuels";
 
-const providerUrl = 'https://mainnet.fuel.network/v1/graphql';
+const providerUrl = 'https://testnet.fuel.network/v1/graphql';
 
 enum Pages {
     Auth,

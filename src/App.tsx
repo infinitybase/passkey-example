@@ -12,7 +12,14 @@ import {
     chakra,
     Separator,
     HStack,
-    createListCollection, useClipboard, Heading, Input, Field, defineStyle
+    createListCollection,
+    useClipboard,
+    Heading,
+    Input,
+    Field,
+    defineStyle,
+    Badge,
+    ProgressCircle,
 } from "@chakra-ui/react";
 import {EmptyState} from "@/components/ui/empty-state.tsx";
 import {StatLabel, StatRoot, StatValueText} from "@/components/ui/stat.tsx";
@@ -489,6 +496,30 @@ const TransactionForn = (props: {
     )
 }
 
+const NetworkBadge = () => {
+    const {passkey} = usePasskey();
+
+    const {data, isLoading} = useQuery({
+        queryKey: ['network-name', passkey.provider?.url],
+        queryFn: () => passkey.provider.getChain(),
+        enabled: !!passkey.provider,
+    });
+
+    return (
+        <Badge color="gray.400" borderRadius="xl" cursor="pointer" px={3} py={2}
+               variant="outline" size="md">
+            {isLoading && !data ? (
+                <ProgressCircle.Root value={null} size="sm">
+                    <ProgressCircle.Circle>
+                        <ProgressCircle.Track/>
+                        <ProgressCircle.Range/>
+                    </ProgressCircle.Circle>
+                </ProgressCircle.Root>
+            ) : data?.name}
+        </Badge>
+    )
+}
+
 const WalletPage = () => {
     const {passkey, passkeyId, changePage} = usePasskey();
     const [step, setStep] = useState(WalletPageStep.Home)
@@ -600,17 +631,20 @@ const WalletPage = () => {
                 {/*</Button>*/}
             </Group>
         </>
-    )
+    );
 
     return (
         <VStack as={Center} h="full" w="full" gap="8" position="relative">
-            <IconButton onClick={() => {
-                passkey.disconnect();
-                changePage(Pages.Auth);
-            }} variant="subtle" rounded="full" top={0} right={0} position="absolute"
-                        aria-label="Logout Wallet">
-                <CiLogout/>
-            </IconButton>
+            <HStack justifyContent="space-between" w="full">
+                <NetworkBadge />
+                <IconButton onClick={() => {
+                    passkey.disconnect();
+                    changePage(Pages.Auth);
+                }} variant="subtle" rounded="full"
+                            aria-label="Logout Wallet">
+                    <CiLogout/>
+                </IconButton>
+            </HStack>
             {step === WalletPageStep.Home && Home}
             {step === WalletPageStep.TxResult && TxResult}
             {step === WalletPageStep.TxForm &&
